@@ -12,3 +12,12 @@ Adding users to monitor is simple, just use the addUser() function:
 ```
 addUser(<NAME TO DISPLAY>,<CHANNEL ID>,<COLOR>)
 ```
+
+Version 0.1
+Original
+
+Version 0.2
+- getSubs() now takes a username instead of channelID
+- Exchanged playerList for number of players
+- addUser() to now take only displayName & channelName
+- randomColor() gives a randomColor to each user
