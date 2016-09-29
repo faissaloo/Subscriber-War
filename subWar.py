@@ -24,44 +24,71 @@
 import requests
 import json
 import curses
+import random
 #Read in the API key from api_key.txt
 try:
-	with open("apiKey.txt","r") as file:
-		APIKEY=file.readline().strip()
-		if len(APIKEY)==0:
-			print("Please place your YouTube API key in api_key.txt")
-			exit()
+    with open("apiKey.txt","r") as file:
+        APIKEY=file.readline().strip()
+        if len(APIKEY)==0:
+            print("Please place your YouTube API key in api_key.txt")
+            exit()
+
 except FileNotFoundError:
-	open("apiKey.txt","w").close()
-	print("Please place your YouTube API key in api_key.txt")
-	exit()
+    open("apiKey.txt","w").close()
+    print("Please place your YouTube API key in api_key.txt")
+    exit()
 
 #Aquires the number of subscribers a given channelID has
-def getSubs(channelID):
+def getSubs(displayName):
     lastRequest = requests.get(
-    	"https://www.googleapis.com/youtube/v3/channels?part=statistics&id="+
-    	channelID+"&key="+APIKEY)
+                               "https://www.googleapis.com/youtube/v3/channels?part=statistics&forUsername="+
+                               displayName+"&key="+APIKEY)
     return int(json.loads(lastRequest.text)["items"][0]["statistics"]["subscriberCount"])
 
-playerList=[]
 playerNames=[]
 playerSubCounts=[]
 playerColors=[]
+channelNames = []
+numOfPlayer = 0
+
+#Chooses a random color for the user
+def randomColor():
+    number = random.randint(0,6)
+    if number == 0:
+        playerColors.append(curses.COLOR_BLACK+1)
+    elif number == 1:
+        playerColors.append(curses.COLOR_RED+1)
+    elif number == 2:
+        playerColors.append(curses.COLOR_GREEN+1)
+    elif number == 3:
+        playerColors.append(curses.COLOR_YELLOW+1)
+    elif number == 4:
+        playerColors.append(curses.COLOR_BLUE+1)
+    elif number == 5:
+        playerColors.append(curses.COLOR_MAGENTA+1)
+    elif number == 6:
+        playerColors.append(curses.COLOR_CYAN+1)
 
 #Adds a user to be tracked
-def addUser(displayName, channelID,color):
+def addUser(displayName, channelName, color = None):
     global playerNames
-    global playerList
     global playerSubCounts
     global playerColors
     playerNames.append(displayName)
-    playerList.append(channelID)
-    playerColors.append(color)
+    channelNames.append(channelName)
     playerSubCounts.append(0)
+    global numOfPlayer
+    numOfPlayer += 1
+    if color is None:
+        randomColor()
+    else:
+        playerColors.append(color)
 
-addUser("👊 PewDiePie","UC-lHJZR3Gqxm24_Vd_AJ5Yw",curses.COLOR_CYAN+1)
-addUser("M Markiplier","UC7_YxT-KID8kRbqZo7MyscQ",curses.COLOR_RED+1)
-addUser("👁 JackSepticEye","UCYzPXprvl5Y-Sf0g4vX-m6g",curses.COLOR_GREEN+1)
+
+addUser("PewDiePie", "pewdiepie", curses.COLOR_CYAN+1)
+addUser("M Markiplier", "markiplierGAME")
+addUser("JackSepticEye", "jacksepticeye")
+
 
 #Screen initialisation
 stdscr=curses.initscr()
@@ -100,34 +127,33 @@ stdscr.addstr(4,1,"  █   █   █ █  █")
 stdscr.addstr(5,1,"  █   █   █ █  █")
 stdscr.addstr(6,1,"  █    ███   ██")
 stdscr.addstr(8,14,"Subscriber War")
-for i in range(len(playerNames)):
-	#Draw usernames
-        stdscr.addstr(upperPadding+(i*3),1,playerNames[i]+":",curses.color_pair(playerColors[i]))
+
+for i in range(numOfPlayer):
+    #Draw usernames
+    stdscr.addstr(upperPadding+(i*3),1,playerNames[i]+":",curses.color_pair(playerColors[i]))
 
 while True:
     #Refresh sub counts
-    for i in range(len(playerList)):
+    for i in range(numOfPlayer):
         try:
-            playerSubCounts[i]=getSubs(playerList[i])
+            playerSubCounts[i]=getSubs(channelNames[i])
         except:
             pass #If we can't get subcount at this time we'll just leave the value as it is
     margin=len(str(max(playerSubCounts)))+2
-    for i in range(len(playerNames)):
+    for i in range(numOfPlayer):
         #Clear the line before we write anything
-        curses.setsyx(upperPadding+(i*3)+1,0)
+        curses.setsyx(upperPadding+((i+1)*3)+1,0)
         stdscr.clrtoeol()
         
         stdscr.attron(curses.color_pair(playerColors[i]))
         #Subcount
         stdscr.addstr(upperPadding+(i*3)+1,1,str(playerSubCounts[i]))
-	
-	#Bar
-        for ii in range(round(((term_width*4)/(1+(max(playerSubCounts)-playerSubCounts[i])/
-        	(max(playerSubCounts)-min(playerSubCounts))))/8)):
+        
+        #Bar
+        for ii in range(round(((term_width*4)/(1+(max(playerSubCounts)-playerSubCounts[i])/(max(playerSubCounts)-min(playerSubCounts))))/8)):
             stdscr.addstr(upperPadding+(i*3)+1,margin+ii+1,"█")
-	#The fraction of the block at the end if needed
-        stdscr.addstr(upperPadding+(i*3)+1,margin+ii+2, chr(ord("█")+int(((term_width*4)/
-        	(1+(max(playerSubCounts)-playerSubCounts[i])/(max(playerSubCounts)-min(
-        	playerSubCounts))))%8)))
-    stdscr.refresh()
+        #The fraction of the block at the end if needed
+            stdscr.addstr(upperPadding+(i*3)+1,margin+ii+2, chr(ord("█")+int(((term_width*4)/
+                                                                              (1+(max(playerSubCounts)-playerSubCounts[i])/(max(playerSubCounts)-min(playerSubCounts))))%8)))
+        stdscr.refresh()
 endwin()
